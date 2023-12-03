@@ -5,15 +5,16 @@ use regex::Regex;
 pub fn main() {
     let content = fs::read_to_string("./day02/input.txt")
         .expect("Should be able to read the file");
+    let games: Vec<Game> = content.lines().map(|line| read(line)).collect();
 
     let max = Subset { red: 12, green: 13, blue: 14, };
-    part1(&content, &max)
+    part1(&games, &max);
+    part2(&games);
 }
 
-fn part1(content: &str, max: &Subset) {
-    let sum: i32 = content.lines().filter_map(|line| {
-        let game = read(line);
-        if is_valid(&game, &max) {
+fn part1(games: &Vec<Game>, max: &Subset) {
+    let sum: i32 = games.iter().filter_map(|game| {
+        if is_valid(game, &max) {
             Some(game.id)
         } else {
             //println!("Game {} is invalid: {:?}", game.id, game);
@@ -21,6 +22,11 @@ fn part1(content: &str, max: &Subset) {
         }
     }).sum();
     println!("Sum of invalid is {sum}")
+}
+
+fn part2(games: &Vec<Game>) {
+    let sum: i32 = games.iter().map(|game| power(&fewest_necessary(game))).sum();
+    println!("Sum of power of the minimum required sets is {sum}")
 }
 
 #[derive(Eq, PartialEq, Debug)]
@@ -74,10 +80,21 @@ pub fn is_valid(game: &Game, max: &Subset) -> bool {
     )
 }
 
+pub fn fewest_necessary(game: &Game) -> Subset {
+    Subset {
+        red: game.subsets.iter().max_by_key(|subset| subset.red).unwrap().red,
+        green: game.subsets.iter().max_by_key(|subset| subset.green).unwrap().green,
+        blue: game.subsets.iter().max_by_key(|subset| subset.blue).unwrap().blue, }
+}
+
+pub fn power(subset: &Subset) -> i32 {
+    subset.red * subset.green * subset.blue
+}
+
 #[cfg(test)]
 mod tests {
     use crate::day02;
-    use crate::day02::{Game, is_valid, Subset};
+    use crate::day02::{fewest_necessary, Game, is_valid, power, Subset};
 
     const SINGLE_ROUND_GAME_STR: &str = "Game 32: 3 blue, 4 red, 27 green";
     const SAMPLE_GAME_STR: &str = "Game 7: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green";
@@ -151,5 +168,17 @@ mod tests {
     fn when_blue_is_too_large_should_not_be_valid() {
         let valid = is_valid(&sample_game(), &Subset { red: 4, green: 2, blue: 5, });
         assert!(!valid, "Game was valid!")
+    }
+
+    #[test]
+    fn fewest_necessary_should_return_expected_minima() {
+        let minima = fewest_necessary(&sample_game());
+        assert_eq!(minima, Subset { red: 4, green: 2, blue: 6, });
+    }
+
+    #[test]
+    fn should_determine_the_correct_power_of_the_sample_game_min_set() {
+        let power = power(&fewest_necessary(&sample_game()));
+        assert_eq!(power, 48);
     }
 }
