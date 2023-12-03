@@ -18,7 +18,7 @@ lazy_static! {
     ]);
 }
 
-pub fn day01_main() {
+pub fn main() {
     let contents = fs::read_to_string("./input_1.txt")
         .expect("Should be able to read the file");
 
