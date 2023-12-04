@@ -9,56 +9,33 @@ pub fn main() {
     part2(&input);
 }
 
-pub fn part2(input: &String) -> u128 {
-    let num_lines = input.lines().filter(|line| !line.is_empty()).count();
-    let mut map: HashMap<usize, u128> = HashMap::new();
-    for i in 1..num_lines + 1 {
-        map.insert(i, 1);
-    }
-    for (idx, card) in input.lines().filter(|line| !line.is_empty()).enumerate() {
-        let idx = idx + 1;
-        let num_matching_numbers = number_of_wins(card);
-        let num_cards = *map.get(&idx).expect(&*format!("Should have card for {idx}"));
-        for i in 1..num_matching_numbers + 1 {
-            if idx + i <= num_lines {
-                *map.get_mut(&(idx + i)).unwrap() += num_cards;
-            }
-        }
-    }
-    let total_score = map.values().sum();
-
-    println!("Part 2 score is {total_score}");
-    total_score
-}
-
 fn part1(input: &String) {
     let total_score: i32 = input.lines().map(|card| score(card)).sum();
     println!("Total score is {total_score}")
 }
 
-fn collect_numbers<T: Iterator<Item=char>>(chars: T) -> Vec<i32> {
-    chars.fold(vec![vec![]], |mut acc, c| {
-        if c.is_numeric() {
-            let mut chars = acc.pop().unwrap();
-            chars.push(c);
-            acc.push(chars)
-        } else {
-            acc.push(vec![])
-        }
-        acc
-    })
-        .iter()
-        .filter_map(|cs| cs.iter().collect::<String>().parse::<i32>().ok())
-        .collect()
-}
+pub fn part2(input: &String) -> u128 {
+    let num_cards = input.lines().filter(|line| !line.is_empty()).count();
 
-pub fn number_of_wins(card: &str) -> usize {
-    let winning_nums: Vec<i32> = collect_numbers(card.chars()
-        .skip_while(|c| *c != ':')
-        .take_while(|c| *c != '|')
-    );
-    let nums: Vec<i32> = collect_numbers(card.chars().skip_while(|c| *c != '|'));
-    nums.iter().filter(|n| winning_nums.contains(n)).count()
+    let mut card_counts: HashMap<usize, u128> = HashMap::new();
+    for i in 1..=num_cards  {
+        card_counts.insert(i, 1);
+    }
+
+    for (idx, card) in input.lines().filter(|line| !line.is_empty()).enumerate() {
+        let idx = idx + 1;
+        let num_matching_numbers = number_of_wins(card);
+        let card_count = *card_counts.get(&idx).expect("Should have card");
+        for i in 1..=num_matching_numbers {
+            if idx + i <= num_cards {
+                *card_counts.get_mut(&(idx + i)).unwrap() += card_count;
+            }
+        }
+    }
+
+    let total_score = card_counts.values().sum();
+    println!("Part 2 score is {total_score}");
+    total_score
 }
 
 pub fn score(card: &str) -> i32 {
@@ -66,6 +43,28 @@ pub fn score(card: &str) -> i32 {
     if num_wins > 0 { 2i32.pow(num_wins - 1) } else { 0 }
 }
 
+pub fn number_of_wins(card: &str) -> usize {
+    let (_, all_numbers) = split_first(card, ':').expect("to contain ':'");
+    let (winning_str, our_str) = split_first(all_numbers, '|').expect("to contain '|'");
+
+    let winning_nums = get_numbers(winning_str);
+    let nums: Vec<i32> = get_numbers(our_str);
+
+    nums.iter().filter(|n| winning_nums.contains(n)).count()
+}
+
+fn get_numbers(string: &str) -> Vec<i32> {
+    string.split(' ')
+        .filter_map(|sub_string| sub_string.parse::<i32>().ok())
+        .collect()
+}
+
+/// Split a string at the first occurrence of `split_at` and return `Some` pair of the head and tail,
+/// or `None` if `split_at` is not present in `string`.
+fn split_first(string: &str, split_at: char) -> Option<(&str, &str)> {
+    string.find(split_at)
+        .map_or(None, |idx| Some((&string[..idx], &string[idx+1..])))
+}
 
 #[cfg(test)]
 mod tests {
