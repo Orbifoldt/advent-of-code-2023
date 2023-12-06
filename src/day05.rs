@@ -1,5 +1,6 @@
 use std::fs;
-use std::ops::Deref;
+use std::ops::{Deref, Range};
+use crate::common::{get_numbers, split_first};
 
 pub fn main() {
     let input = &fs::read_to_string("./day05/input.txt").unwrap();
