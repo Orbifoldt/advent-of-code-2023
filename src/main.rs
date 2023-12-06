@@ -10,5 +10,6 @@ fn main() {
     // day03::main();
     // day04::main();
     day05::main();
+    // day05_parallel::main()
 }
 
