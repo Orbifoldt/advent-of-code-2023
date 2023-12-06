@@ -3,6 +3,9 @@ mod day02;
 mod day03;
 mod day04;
 mod day05;
+mod day06;
+mod common;
+mod range_set_theory;
 
 fn main() {
     // day01::main();

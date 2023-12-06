@@ -10,7 +10,6 @@ pub fn main() {
     part2(input);
 }
 
-
 pub fn part1(input: &str) -> i64 {
     let almanac = parse(input);
 
@@ -21,51 +20,9 @@ pub fn part1(input: &str) -> i64 {
     lowest_location
 }
 
-// pub fn part2(input: &str) -> i64 {
-//     let almanac = parse_part2(input);
-//     // todo!("");
-//
-//     // let output_ranges = almanac.entries.iter().fold(
-//     //     almanac.seeds,
-//     //     |things_to_check, map| {
-//     //         println!("\n=> {}", map.name);
-//     //         things_to_check.iter()
-//     //             .flat_map(|input_range| {
-//     //                 println!("Calculating output for input range [{},{})", input_range.start, input_range.end);
-//     //                 map.apply_to(input_range)
-//     //             })
-//     //             .collect()
-//     //     });
-//
-//     let output_ranges = almanac.entries.iter().fold(
-//         almanac.seeds,
-//         |things_to_check, map| {
-//             println!("\n=> {}", map.name);
-//             things_to_check.iter()
-//                 .flat_map(|input_range| {
-//                     println!("Calculating output for input range [{},{})", input_range.start, input_range.end);
-//                     map.apply_to(input_range)
-//                 })
-//                 .collect()
-//         });
-//
-//
-//
-//     let lowest_location = output_ranges.iter().map(|range| range.start).min().unwrap();
-//     println!("Part 1: minimum location for any seed is {lowest_location}");
-//     lowest_location
-// }
-
 pub fn part2(input: &str) -> i64 {
     let almanac = parse_part2(input);
-    // let lowest_location = 0(0..100u64).into_par_iter()
-    //     .sum();
 
-    // let seeds = almanac.seeds.iter().next().unwrap();
-    // let lowest_location = (seeds.start as u64..seeds.end as u64).into_par_iter()
-    //     .map(|seed: u64| almanac.follow(&(seed as i64)))
-    //     .min()
-    //     .unwrap();
     let lowest_location = almanac.seeds.par_iter()
         .enumerate()
         .flat_map(|(idx, seeds)| {
@@ -78,7 +35,6 @@ pub fn part2(input: &str) -> i64 {
         .unwrap();
     println!("Part 2: minimum location for any seed is {lowest_location}");
     lowest_location
-    // todo!()
 }
 
 pub fn parse(input: &str) -> Almanac {
@@ -155,90 +111,12 @@ impl<'a> RangedMap<'a> {
             .unwrap_or(*seed)
     }
 
-    pub fn apply_to_old(&self, input_range: Range<i64>) -> Vec<Range<i64>> {
-        let intersections = self.mapping.iter()
-            .map(|entry| intersect_range(&entry.as_range(), &input_range))
-            .collect::<Vec<_>>();
-        let input_range_without_intersections = cut_out_many(input_range, &intersections);
-
-        intersections.iter().map(|rng: &Range<i64>| {
-            let target_start = self.get(&rng.start);
-            (target_start..(target_start + rng.end - rng.start))
-        }).into_iter()
-            .chain(input_range_without_intersections.into_iter())
-            .collect()
-    }
-
-    pub fn apply_to(&self, input_range: &Range<i64>) -> Vec<Range<i64>> {
-        // self.mapping.iter().map(|map|)
-
-        let mut y = vec![input_range.start..input_range.end];
-        y.extend_from_slice(self.mapping.iter().map(|entry| intersect_range(input_range, &entry.as_range())).collect::<Vec<_>>().iter().as_slice());
-        let ranges = split_at_many_boundaries(y);
-        ranges.iter()
-            .map(|rng| {
-                let target_start = self.get(&rng.start);
-                target_start..(target_start+rng.end - rng.start)
-            })
-            .collect()
-    }
-
-    // pub fn apply_to_many(&self, input_ranges: Vec<Range<i64>>) -> Vec<Range<i64>> {
-    //
-    //
-    //
-    //     let intersections = self.mapping.iter()
-    //         .map(|entry| intersect_range(&entry.as_range(), &input_range))
-    //         .collect::<Vec<_>>();
-    //     let input_range_without_intersections = cut_out_many(input_range, &intersections);
-    //
-    //     intersections.iter().map(|rng: &Range<i64>| {
-    //         let target_start = self.get(&rng.start);
-    //         (target_start..(target_start + rng.end - rng.start))
-    //     }).into_iter()
-    //         .chain(input_range_without_intersections.into_iter())
-    //         .collect()
-    // }
 }
-
-// fn split_at_boundaries(a: Range<i64>, b: Range<i64>) -> Vec<Range<i64>> {
-//     let mut endpoints = vec![a.start, a.end, b.start, b.end];
-//     endpoints.sort();
-//     endpoints.dedup();
-//     endpoints.windows(2).map(|window| {
-//         let [a,b] = window else { panic!("") };
-//         a..b
-//     }).collect()
-// }
-fn split_at_many_boundaries(aa: Vec<Range<i64>>) -> Vec<Range<i64>> {
-    let mut endpoints = aa.iter().flat_map(|a| [a.start, a.end]).collect::<Vec<_>>();
-    endpoints.sort();
-    endpoints.dedup();
-    endpoints.windows(2).map(|window| {
-        let [a,b] = window else { panic!("God is dead") };
-        *a..*b
-    }).collect()
-}
-
-
-
-
 
 struct RangedMapEntry {
     start: i64,
     range_length: i64,
     target_start: i64,
-}
-
-impl RangedMapEntry {
-    pub fn as_range(&self) -> Range<i64> {
-        self.start..(self.start + self.range_length)
-    }
-
-    // the shift that this rangedmapentry applies to its input
-    pub fn shift(&self) -> i64 {
-        self.target_start - self.start
-    }
 }
 
 #[cfg(test)]
