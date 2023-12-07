@@ -28,7 +28,7 @@ pub fn part1(input: &str) -> i64 {
 pub fn part2(input: &str) -> i64 {
     let mut hands = input.lines().map(|line| Hand::new_pt2(line)).collect::<Vec<_>>();
     hands.sort_by(|a,b | {
-        cmp_hands(a, b)
+        cmp_hands_pt2(a, b)
     });
     let winnings = hands.iter().enumerate().map(|(rank, hand)| {
         let rank = rank as i64 + 1;
@@ -197,7 +197,7 @@ fn determine_type_pt2(cards: &[char; 5]) -> HandType {
     *b
 }
 
-fn cmp_hands(a: &Hand, b: &Hand) -> Ordering {
+fn cmp_hands_pt2(a: &Hand, b: &Hand) -> Ordering {
     let type_cmp = a.hand_type.cmp(&b.hand_type).reverse();
     match type_cmp {
         Equal => cmp_char_arrays(&a.cards, &b.cards, cmp_chars_pt2),
@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn should_correctly_compare_numbers() {
+    fn bugfix__should_correctly_compare_numbers() {
         let hand1 = Hand::new("A9AAA 220");
         let hand2 = Hand::new("A8AAA 220");
 
