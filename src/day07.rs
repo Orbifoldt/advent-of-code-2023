@@ -10,7 +10,7 @@ use crate::day07::HandType::{FiveOfAKind, FourOfAKind, FullHouse, HighCard, OneP
 pub fn main() {
     let input = &fs::read_to_string("./day07/input.txt").unwrap();
     part1(input);
-    // part2(input);
+    part2(input);
 }
 
 pub fn part1(input: &str) -> i64 {
@@ -158,9 +158,10 @@ fn determine_type_pt2(cards: &[char; 5]) -> HandType {
     }
 
     println!("\nHand {:?} contains Jokers, determining best use of them...", cards);
-    // todo: if all jokers, try ace
-    let cards_to_try = frequencies.keys().filter(|c| ***c != 'J').collect::<Vec<_>>();
-    // let cards_to_change = cards.iter().enumerate().filter(|(idx, c)| c == 'J').collect::<Vec<_>>();
+    let mut cards_to_try = frequencies.keys().filter(|c| ***c != 'J').collect::<Vec<_>>();
+    if cards_to_try.is_empty() {
+        cards_to_try = vec![&&'A']
+    }
 
     let perms = cards.iter().enumerate()
         .fold(vec![vec![]], |acc, (idx, c)| {
