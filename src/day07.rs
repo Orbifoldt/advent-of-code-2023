@@ -8,12 +8,12 @@ use crate::common::split_first;
 use crate::day07::HandType::{FiveOfAKind, FourOfAKind, FullHouse, HighCard, OnePair, ThreeOfAKind, TwoPair};
 
 pub fn main() {
-    let input = &fs::read_to_string("./day07/input.txt").unwrap();
+    let input = &fs::read_to_string("./inputs/day07/input.txt").unwrap();
     part1(input);
     part2(input);
 }
 
-pub fn part1(input: &str) -> i64 {
+fn part1(input: &str) -> i64 {
     let mut hands = input.lines().map(|line| Hand::new(line)).collect::<Vec<_>>();
     hands.sort();
     let winnings = hands.iter().enumerate().map(|(rank, hand)| {
@@ -25,7 +25,7 @@ pub fn part1(input: &str) -> i64 {
     winnings
 }
 
-pub fn part2(input: &str) -> i64 {
+fn part2(input: &str) -> i64 {
     let mut hands = input.lines().map(|line| Hand::new_pt2(line)).collect::<Vec<_>>();
     hands.sort_by(|a,b | {
         cmp_hands_pt2(a, b)
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn should_correctly_compare_hands() {
-        let hands = fs::read_to_string("./day07/input_example.txt").unwrap().lines().map(|line|
+        let hands = fs::read_to_string("./inputs/day07/input_example.txt").unwrap().lines().map(|line|
             Hand::new(line)
         ).collect::<Vec<_>>();
         let [h1, h4, h3, h2, h5] = hands.try_into().unwrap();
@@ -270,13 +270,13 @@ mod tests {
 
     #[test]
     fn should_return_correct_total_winnings() {
-        let x = part1(&fs::read_to_string("./day07/input_example.txt").unwrap());
+        let x = part1(&fs::read_to_string("./inputs/day07/input_example.txt").unwrap());
         assert_eq!(x, 6440)
     }
 
     #[test]
     fn should_return_correct_total_winnings_part2() {
-        let x = part2(&fs::read_to_string("./day07/input_example.txt").unwrap());
+        let x = part2(&fs::read_to_string("./inputs/day07/input_example.txt").unwrap());
         assert_eq!(x, 5905)
     }
 }
