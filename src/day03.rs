@@ -6,7 +6,7 @@ use regex::Regex;
 pub fn main() {
     println!("day03");
 
-    let schematic = Schematic::new(&fs::read_to_string("./day03/input.txt").unwrap());
+    let schematic = Schematic::new(&fs::read_to_string("./inputs/day03/input.txt").unwrap());
     let all_numbers = possible_part_numbers(&schematic);
     let part_numbers: Vec<&Number> = all_numbers.iter()
         .filter(|number| is_part_number(&schematic, number))
@@ -128,7 +128,7 @@ mod tests {
     use crate::day03::{is_neighbor, is_part_number, Number, possible_part_numbers, Schematic};
 
     fn load_example() -> Schematic {
-        Schematic::new(&fs::read_to_string("./day03/input_example.txt").unwrap())
+        Schematic::new(&fs::read_to_string("./inputs/day03/input_example.txt").unwrap())
     }
 
     #[test]

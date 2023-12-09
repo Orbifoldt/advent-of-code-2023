@@ -4,7 +4,7 @@ use std::fs;
 use regex::Replacer;
 
 pub fn main() {
-    let input = fs::read_to_string("./day04/input.txt").unwrap();
+    let input = fs::read_to_string("./inputs/day04/input.txt").unwrap();
     part1(&input);
     part2(&input);
 }
@@ -14,7 +14,7 @@ fn part1(input: &String) {
     println!("Total score is {total_score}")
 }
 
-pub fn part2(input: &String) -> u128 {
+fn part2(input: &String) -> u128 {
     let num_cards = input.lines().filter(|line| !line.is_empty()).count();
 
     let mut card_counts: HashMap<usize, u128> = HashMap::new();
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn should_return_correct_number_of_cards_for_part2() {
-        let pt2 = part2(&fs::read_to_string("./day04/input_example.txt").unwrap());
+        let pt2 = part2(&fs::read_to_string("./inputs/day04/input_example.txt").unwrap());
         assert_eq!(pt2, 30)
     }
 }
