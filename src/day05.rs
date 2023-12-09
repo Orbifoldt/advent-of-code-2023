@@ -5,12 +5,12 @@ use crate::common::{get_numbers, split_first};
 use crate::range_set_theory::{cut_out_many, intersect_range};
 
 pub fn main() {
-    let input = &fs::read_to_string("./day05/input.txt").unwrap();
+    let input = &fs::read_to_string("./inputs/day05/input.txt").unwrap();
     part1(input);
     part2(input);
 }
 
-pub fn part1(input: &str) -> i64 {
+fn part1(input: &str) -> i64 {
     let almanac = parse(input);
 
     let lowest_location = almanac.seeds.iter()
@@ -20,7 +20,7 @@ pub fn part1(input: &str) -> i64 {
     lowest_location
 }
 
-pub fn part2(input: &str) -> i64 {
+fn part2(input: &str) -> i64 {
     let almanac = parse_part2(input);
 
     let lowest_location = almanac.seeds.par_iter()
@@ -126,20 +126,20 @@ mod tests {
 
     #[test]
     fn should_return_correct_minimum_seed_location() {
-        let lowest_location = part1(&fs::read_to_string("./day05/input_example.txt").unwrap());
+        let lowest_location = part1(&fs::read_to_string("./inputs/day05/input_example.txt").unwrap());
         assert_eq!(lowest_location, 35)
     }
 
     #[test]
     fn almanac_should_correctly_map_seed_to_soil() {
-        let input = &fs::read_to_string("./day05/input_example.txt").unwrap();
+        let input = &fs::read_to_string("./inputs/day05/input_example.txt").unwrap();
         let almanac = parse(input);
         assert_eq!(almanac.entries[0].get(&79), 81)
     }
 
     #[test]
     fn should_return_correct_minimum_seed_location_part_2() {
-        let lowest_location = part2(&fs::read_to_string("./day05/input_example.txt").unwrap());
+        let lowest_location = part2(&fs::read_to_string("./inputs/day05/input_example.txt").unwrap());
         assert_eq!(lowest_location, 46)
     }
 }
