@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 pub fn main() {
-    let content = fs::read_to_string("./day02/input.txt")
+    let content = fs::read_to_string("./inputs/day02/input.txt")
         .expect("Should be able to read the file");
     let games: Vec<Game> = content.lines().map(|line| read(line)).collect();
 
