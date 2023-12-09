@@ -2,7 +2,7 @@ use std::fs;
 use crate::common::get_numbers;
 
 pub fn main() {
-    let input = &fs::read_to_string("./day09/input.txt").unwrap();
+    let input = &fs::read_to_string("./inputs/day09/input.txt").unwrap();
     part1(input);
     part2(input);
 }
