@@ -5,12 +5,12 @@ use std::ops::Range;
 use crate::common::{get_numbers, split_first};
 
 pub fn main() {
-    let input = &fs::read_to_string("./day06/input.txt").unwrap();
+    let input = &fs::read_to_string("./inputs/day06/input.txt").unwrap();
     part1(input);
     part2(input);
 }
 
-pub fn part1(input: &str) -> i64 {
+fn part1(input: &str) -> i64 {
     let prod_beating_times: i64 = parse_part1(input).iter().map(|(time, distance)| {
         let times_interval = times_that_beat_record(time, distance);
         times_interval.end - times_interval.start
@@ -19,7 +19,7 @@ pub fn part1(input: &str) -> i64 {
     prod_beating_times
 }
 
-pub fn part2(input: &str) -> i64 {
+fn part2(input: &str) -> i64 {
     let (time, distance) = parse_part2(input);
     let times_interval = times_that_beat_record(&time, &distance);
     let num_winning_times = times_interval.end - times_interval.start;
@@ -68,13 +68,13 @@ mod tests {
 
     #[test]
     fn should_return_correct_total_number_of_winning_times() {
-        let x = part1(&fs::read_to_string("./day06/input_example.txt").unwrap());
+        let x = part1(&fs::read_to_string("./inputs/day06/input_example.txt").unwrap());
         assert_eq!(x, 288)
     }
 
     #[test]
     fn should_return_correct_total_number_of_winning_times_part2() {
-        let x = part2(&fs::read_to_string("./day06/input_example.txt").unwrap());
+        let x = part2(&fs::read_to_string("./inputs/day06/input_example.txt").unwrap());
         assert_eq!(x, 71503)
     }
 }
