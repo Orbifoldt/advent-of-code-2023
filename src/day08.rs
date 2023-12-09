@@ -3,7 +3,7 @@ use std::fs;
 use crate::common::{lcm, split_first};
 
 pub fn main() {
-    let input = &fs::read_to_string("./day08/input.txt").unwrap();
+    let input = &fs::read_to_string("./inputs/day08/input.txt").unwrap();
     part1(input);
     part2(input);
 }
