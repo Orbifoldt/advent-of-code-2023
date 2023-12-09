@@ -4,7 +4,7 @@ use crate::common::get_numbers;
 pub fn main() {
     let input = &fs::read_to_string("./day09/input.txt").unwrap();
     part1(input);
-    // part2(input);
+    part2(input);
 }
 
 fn part1(input: &str) -> i64 {
@@ -14,7 +14,12 @@ fn part1(input: &str) -> i64 {
 }
 
 fn part2(input: &str) -> i64 {
-    todo!()
+    let sum = parse(input).into_iter()
+        .map(|mut sequence| { sequence.reverse(); sequence} )
+        .map(find_next)
+        .sum();
+    println!("Part 2: Sum of previous sequence elements is: {sum}");
+    sum
 }
 
 fn parse(input: &str) -> Vec<Vec<i64>> {
@@ -37,7 +42,7 @@ fn find_next(sequence: Vec<i64>) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::day09::{find_next, part1};
+    use crate::day09::{find_next, part1, part2};
 
     #[test]
     fn should_find_next_element_in_constant_sequence() {
@@ -56,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn example_should_be_computed_correctly() {
+    fn example_should_be_computed_correctly_for_part_1() {
         let input = r"0 3 6 9 12 15
 1 3 6 10 15 21
 10 13 16 21 30 45";
@@ -65,5 +70,11 @@ mod tests {
     }
 
     #[test]
-    fn example_part_2_should_be_computed_correctly() {}
+    fn example_should_be_computed_correctly_for_part_2() {
+        let input = r"0 3 6 9 12 15
+1 3 6 10 15 21
+10 13 16 21 30 45";
+        let sum = part2(input);
+        assert_eq!(sum, 2)
+    }
 }
