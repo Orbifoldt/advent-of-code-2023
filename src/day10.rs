@@ -1,29 +1,99 @@
 use std::{fmt, fs};
-use std::fmt::{Formatter, write};
+use std::collections::HashSet;
+use std::fmt::Formatter;
 use std::slice::Iter;
 use std::str::FromStr;
-use crate::day10::Direction::{E, N, W, S};
-use crate::day10::NextStep::{DeadEnd, Continue, Start};
-use crate::day10::Tile::{EW, GROUND, NE, NS, NW, START, SE, SW};
+
+use crate::day10::Direction::{E, N, S, W};
+use crate::day10::NextStep::{Continue, DeadEnd, Start};
+use crate::day10::Tile::{EW, GROUND, NE, NS, NW, SE, START, SW};
 
 pub fn main() {
     let input = &fs::read_to_string("./inputs/day10/input.txt").unwrap();
     part1(input);
-    // part2(input);
+    part2(input);
 }
 
 fn part1(input: &str) -> i64 {
     let map = parse(input);
-    let loop_coords = find_loop_coords(&map);
+    let (_, loop_coords) = find_loop_coords(&map);
     println!("Part 1: number of steps farthest from start is {}", loop_coords.len() / 2);
     (loop_coords.len() / 2) as i64
 }
 
 fn part2(input: &str) -> i64 {
+    let (sx, sy) = input.lines().enumerate().filter_map(|(y, line)| line.find('S').map(|x| (x, y))).next().unwrap();
+    let mut map = parse(input);
+    let (start_tile, loop_coords) = find_loop_coords(&map);
+    map[sy][sx] = start_tile;
 
-    let map = parse(input);
-    let loop_coords = find_loop_coords(&map);
-    todo!()
+    let loop_coords: HashSet<&Coord<usize>> = loop_coords.iter().collect();
+    let mut enhanced = enhance(&map, &loop_coords);
+
+    // Find and fill the outside tiles. This works since we know there is one unique loop of pipe.
+    // We already removed all other tiles during the enlarging/enhancing step, so can't have
+    // isolated area's other than the internal part of the loop.
+    let outside = flood_fill((0, 0), 3 * map_width(&map), 3 * map_height(&map), |(x, y)| !enhanced[*y][*x]);
+    outside.iter().for_each(|(x, y)| enhanced[*y][*x] = true);
+
+    let mut inside_count = 0;
+    for x in 0..map_width(&map) {
+        for y in 0..map_height(&map) {
+            let is_filled = (0..3).any(|dy| (0..3).any(|dx| enhanced[3*y + dy][3*x + dx]));
+            if !is_filled { inside_count += 1; }
+        }
+    }
+    println!("Part 2: number of enclosed tiles is {inside_count}");
+    inside_count as i64
+}
+
+// Replaces each tile with a 3x3 version. If tile is part of the loop we enlarge the pipe, else we
+// just put in an empty 3x3 tile (we don't care about loose pipes anywhere)
+fn enhance(map: &Map, loop_coords: &HashSet<&Coord<usize>>) -> Vec<Vec<bool>> {
+    let mut new_map = (0..3 * map_height(map)).map(|x| {
+        (0..3 * map_width(map)).map(|y| false).collect()
+    }).collect::<Vec<Vec<bool>>>();
+
+    // Set 3x3 versions of tiles appearing in the loop
+    for &&(x, y) in loop_coords {
+        let (center_x, center_y) = (3 * x + 1, 3 * y + 1);
+        new_map[center_y][center_x] = true;
+
+        let tile = get_tile(map, (x, y));
+        tile.to_string().chars().for_each(|c| {
+            let direction = Direction::from_str(c.to_string().as_str()).unwrap();
+            let (dx, dy) = direction.coord_offset();
+            new_map[(center_y as isize + dy) as usize][(center_x as isize + dx) as usize] = true;
+        })
+    }
+    new_map
+}
+
+type Coord<T> = (T, T);
+
+fn flood_fill(start: Coord<usize>, width: usize, height: usize, is_in: impl Fn(&Coord<usize>) -> bool) -> HashSet<Coord<usize>> {
+    let mut coords_to_check: Vec<Coord<usize>> = vec![start];
+    let mut visited: HashSet<Coord<usize>> = HashSet::new();
+
+    while !coords_to_check.is_empty() {
+        let current = coords_to_check.pop().unwrap();
+        if !visited.contains(&current) && is_in(&current) {
+            visited.insert(current);
+            coords_to_check.append(&mut get_neighbors(width, height, current));
+        }
+    }
+    visited
+}
+
+fn get_neighbors(width: usize, height: usize, coord: Coord<usize>) -> Vec<Coord<usize>> {
+    [(1, 0), (0, 1), (-1, 0), (0, -1)].iter().filter_map(|(dx, dy)| {
+        let neighbor = (coord.0 as isize + dx, coord.1 as isize + dy);
+        if (0..width as isize).contains(&neighbor.0) && (0..height as isize).contains(&neighbor.1) {
+            Some((neighbor.0 as usize, neighbor.1 as usize))
+        } else {
+            None
+        }
+    }).collect()
 }
 
 type Map = Vec<Vec<Tile>>;
@@ -44,7 +114,7 @@ fn parse(input: &str) -> Map {
     input.lines().map(|line| line.chars().map(Tile::from_char).collect()).collect()
 }
 
-fn find_loop_coords(map: &Map) -> Vec<(usize, usize)> {
+fn find_loop_coords(map: &Map) -> (Tile, Vec<(usize, usize)>) {
     let (start_x, start_y) = map.iter().enumerate().find_map(|(y, row)| {
         row.iter().enumerate()
             .find_map(|(x, c)| if c == &START { Some(x) } else { None })
@@ -52,32 +122,24 @@ fn find_loop_coords(map: &Map) -> Vec<(usize, usize)> {
     }).expect("Should contain a starting pipe 'S'!");
 
     let loop_coords = Tile::pipes_iter().filter_map(|start_tile| {
-        println!("\n\nTrying with start tile {start_tile}:");
+        // println!("\n\nTrying with start tile {start_tile}:");
         let result = start_tile.to_string().chars()
             .filter_map(|c| {
+                // todo: start tile must be connected on both sides, so we can just find any
+                //       matching pipes, and then for each pipe just try a single direction
 
                 let mut heading = Direction::from_str(c.to_string().as_str()).unwrap();
                 let mut coord = (start_x, start_y);
                 let mut tile = *start_tile;
-                println!("\n  Going in {heading} direction from start:");
 
                 let mut loop_coords: Vec<(usize, usize)> = vec![];
                 loop {
-                    // println!("  - Currently at ({}, {}) which is a {tile} tile, heading {heading}", coord.0, coord.1);
                     loop_coords.push(coord);
                     let outcome = next_coord(map, coord, heading, *start_tile);
                     match outcome {
-                        DeadEnd => {
-                            println!("  Hit dead end, terminating...");
-                            return None
-                        }
-                        Start => {
-                            println!("  Found the start!");
-                            return Some(loop_coords)
-                        }
-                        Continue((t, c, h)) => {
-                            (tile, coord, heading) = (t, c, h);
-                        }
+                        DeadEnd => { return None; }
+                        Start => { return Some((*start_tile, loop_coords)); }
+                        Continue((t, c, h)) => { (tile, coord, heading) = (t, c, h); }
                     };
                 }
                 panic!("Unreachable")
@@ -106,7 +168,7 @@ fn next_coord(map: &Map, current: (usize, usize), current_heading: Direction, st
         let next_heading = if next_tile == START {
             next_heading(start_tile_replacement, current_heading)
         } else {
-            next_heading(*next_tile, current_heading)
+            next_heading(next_tile, current_heading)
         };
         if next_heading.is_none() {
             DeadEnd
@@ -116,17 +178,18 @@ fn next_coord(map: &Map, current: (usize, usize), current_heading: Direction, st
             if current_tile == START {
                 current_tile = start_tile_replacement;
             }
-            if current_tile.connects_to(&next_tile, current_heading){
+
+            if (next_tile == START && current_tile.connects_to(&start_tile_replacement, current_heading))
+                || current_tile.connects_to(&next_tile, current_heading) {
                 if next_tile == START {
                     Start
                 } else {
-                    Continue((*next_tile, next_coord, next_heading))
+                    Continue((next_tile, next_coord, next_heading))
                 }
             } else {
                 println!("  Can't go from {current_tile} tile in {current_heading} to a {next_tile} tile.");
                 DeadEnd
             }
-
         }
     }
 }
@@ -189,6 +252,20 @@ impl Direction {
             W => E,
         }
     }
+
+    fn coord_offset(&self) -> Coord<isize> {
+        match self {
+            N => (0, -1),
+            E => (1, 0),
+            S => (0, 1),
+            W => (-1, 0),
+        }
+    }
+
+    fn iter() -> Iter<'static, Direction> {
+        static DIRECTIONS: [Direction; 4] = [N, E, S, W];
+        DIRECTIONS.iter()
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -216,9 +293,9 @@ impl Tile {
     fn connects_to(&self, other: &Tile, heading: Direction) -> bool {
         if !self.to_string().contains(&heading.to_string()) {
             dbg!(format!("Direction {heading} invalid to go from {self} ..."));
-            return false
+            return false;
         }
-        return other.to_string().contains(&heading.inverse().to_string())
+        return other.to_string().contains(&heading.inverse().to_string());
     }
 }
 
@@ -231,9 +308,10 @@ impl fmt::Display for Tile {
 #[cfg(test)]
 mod tests {
     use std::fs;
+
     use crate::day10::{find_loop_coords, next_heading, parse, part1, part2};
     use crate::day10::Direction::{E, N, S, W};
-    use crate::day10::Tile::{EW, GROUND, NE, NS, NW, START, SE, SW};
+    use crate::day10::Tile::{EW, NE, NS, NW, SE, SW};
 
     #[test]
     fn should_correctly_determine_next_heading() {
@@ -265,7 +343,7 @@ mod tests {
 .|.|.
 .L-J.
 .....");
-        let loop_length = find_loop_coords(&map).len();
+        let loop_length = find_loop_coords(&map).1.len();
         assert_eq!(loop_length, 8);
     }
 
@@ -276,7 +354,7 @@ mod tests {
 SJ.L7
 |F--J
 LJ...");
-        let loop_length = find_loop_coords(&map).len();
+        let loop_length = find_loop_coords(&map).1.len();
         assert_eq!(loop_length, 16);
     }
 
@@ -287,14 +365,58 @@ LJ...");
 SJLL7
 |F--J
 LJ.LJ");
-        let loop_length = find_loop_coords(&map).len();
+        let loop_length = find_loop_coords(&map).1.len();
         assert_eq!(loop_length, 16);
     }
 
     #[test]
     fn part1_should_pass() {
-        let x= part1(&fs::read_to_string("./inputs/day10/input.txt").unwrap());
+        let x = part1(&fs::read_to_string("./inputs/day10/input.txt").unwrap());
         assert_eq!(x, 7066);
+    }
+
+    #[test]
+    fn example_part2_1() {
+        let x = part2(r"..........
+.S------7.
+.|F----7|.
+.||....||.
+.||....||.
+.|L-7F-J|.
+.|..||..|.
+.L--JL--J.
+..........");
+        assert_eq!(x, 4);
+    }
+
+    #[test]
+    fn example_part2_2() {
+        let x = part2(r".F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...");
+        assert_eq!(x, 8);
+    }
+
+    #[test]
+    fn example_part2_3() {
+        let x = part2(r"FF7FSF7F7F7F7F7F---7
+L|LJ||||||||||||F--J
+FL-7LJLJ||||||LJL-77
+F--JF--7||LJLJ7F7FJ-
+L---JF-JLJ.||-FJLJJ7
+|F|F-JF---7F7-L7L|7|
+|FFJF7L7F-JF7|JL---7
+7-L-JL7||F7|L7F-7F7|
+L.L7LFJ|||||FJL7||LJ
+L7JLJL-JLJLJL--JLJ.L");
+        assert_eq!(x, 10);
     }
 }
 
