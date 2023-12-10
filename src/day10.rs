@@ -20,10 +20,25 @@ fn part1(input: &str) -> i64 {
 }
 
 fn part2(input: &str) -> i64 {
+
+    let map = parse(input);
+    let loop_coords = find_loop_coords(&map);
     todo!()
 }
 
 type Map = Vec<Vec<Tile>>;
+
+fn get_tile(map: &Map, coord: (usize, usize)) -> Tile {
+    *map.get(coord.1).map(|row| row.get(coord.0)).flatten().unwrap()
+}
+
+fn map_width(map: &Map) -> usize {
+    map.first().unwrap().len()
+}
+
+fn map_height(map: &Map) -> usize {
+    map.len()
+}
 
 fn parse(input: &str) -> Map {
     input.lines().map(|line| line.chars().map(Tile::from_char).collect()).collect()
@@ -40,41 +55,32 @@ fn find_loop_coords(map: &Map) -> Vec<(usize, usize)> {
         println!("\n\nTrying with start tile {start_tile}:");
         let result = start_tile.to_string().chars()
             .filter_map(|c| {
-                let mut loop_coords: Vec<(usize, usize)> = vec![];
 
                 let mut heading = Direction::from_str(c.to_string().as_str()).unwrap();
                 let mut coord = (start_x, start_y);
                 let mut tile = *start_tile;
                 println!("\n  Going in {heading} direction from start:");
 
-                let mut done = false;
-                let mut the_outcome: Option<NextStep> = None;
-
-                while the_outcome.is_none() {
+                let mut loop_coords: Vec<(usize, usize)> = vec![];
+                loop {
                     // println!("  - Currently at ({}, {}) which is a {tile} tile, heading {heading}", coord.0, coord.1);
                     loop_coords.push(coord);
                     let outcome = next_coord(map, coord, heading, *start_tile);
                     match outcome {
                         DeadEnd => {
                             println!("  Hit dead end, terminating...");
-                            done = true;
-                            the_outcome = Some(DeadEnd)
+                            return None
                         }
                         Start => {
                             println!("  Found the start!");
-
-                            done = true;
-                            the_outcome = Some(Start)
+                            return Some(loop_coords)
                         }
                         Continue((t, c, h)) => {
                             (tile, coord, heading) = (t, c, h);
                         }
                     };
-                };
-                match the_outcome {
-                    Some(Start) => Some(loop_coords),
-                    _ => None,
                 }
+                panic!("Unreachable")
             })
             .next();
         result
@@ -85,23 +91,19 @@ fn find_loop_coords(map: &Map) -> Vec<(usize, usize)> {
 
 
 fn next_coord(map: &Map, current: (usize, usize), current_heading: Direction, start_tile_replacement: Tile) -> NextStep {
-    let width = map.first().unwrap().len();
-    let (x, y) = current;
-    if (current_heading == W && x == 0) || (current_heading == N && y == 0)
-        || (current_heading == E && x > width) || (current_heading == S && y >= map.len()) {
+    let (current_x, current_y) = current;
+    if (current_heading == W && current_x == 0) || (current_heading == N && current_y == 0)
+        || (current_heading == E && current_x > map_width(map))
+        || (current_heading == S && current_y >= map_height(map)) {
         return DeadEnd;
     }
-    let (next_x, next_y) = match current_heading {
-        N => (x, y - 1),
-        E => (x + 1, y),
-        S => (x, y + 1),
-        W => (x - 1, y),
-    };
-    let next_tile = map.get(next_y).unwrap().get(next_x).unwrap();
-    if next_tile == &GROUND {
+
+    let next_coord = move_from(current_x, current_y, current_heading);
+    let next_tile = get_tile(map, next_coord);
+    if next_tile == GROUND {
         DeadEnd
     } else {
-        let next_heading = if next_tile == &START {
+        let next_heading = if next_tile == START {
             next_heading(start_tile_replacement, current_heading)
         } else {
             next_heading(*next_tile, current_heading)
@@ -110,15 +112,15 @@ fn next_coord(map: &Map, current: (usize, usize), current_heading: Direction, st
             DeadEnd
         } else {
             let next_heading = next_heading.unwrap();
-            let mut current_tile = map.get(y).unwrap().get(x).unwrap();
-            if current_tile == &START {
-                current_tile = &start_tile_replacement;
+            let mut current_tile = get_tile(map, current);
+            if current_tile == START {
+                current_tile = start_tile_replacement;
             }
-            if current_tile.connects_to(next_tile, current_heading){
-                if next_tile == &START {
+            if current_tile.connects_to(&next_tile, current_heading){
+                if next_tile == START {
                     Start
                 } else {
-                    Continue((*next_tile, (next_x, next_y), next_heading))
+                    Continue((*next_tile, next_coord, next_heading))
                 }
             } else {
                 println!("  Can't go from {current_tile} tile in {current_heading} to a {next_tile} tile.");
@@ -126,6 +128,15 @@ fn next_coord(map: &Map, current: (usize, usize), current_heading: Direction, st
             }
 
         }
+    }
+}
+
+fn move_from(x: usize, y: usize, heading: Direction) -> (usize, usize) {
+    match heading {
+        N => (x, y - 1),
+        E => (x + 1, y),
+        S => (x, y + 1),
+        W => (x - 1, y),
     }
 }
 
