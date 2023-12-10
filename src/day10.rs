@@ -14,9 +14,9 @@ pub fn main() {
 
 fn part1(input: &str) -> i64 {
     let map = parse(input);
-    let loop_length = find_loop_length(&map);
-    println!("Part 1: number of steps farthest from start is {}", loop_length / 2);
-    loop_length / 2
+    let loop_coords = find_loop_coords(&map);
+    println!("Part 1: number of steps farthest from start is {}", loop_coords.len() / 2);
+    (loop_coords.len() / 2) as i64
 }
 
 fn part2(input: &str) -> i64 {
@@ -29,28 +29,30 @@ fn parse(input: &str) -> Map {
     input.lines().map(|line| line.chars().map(Tile::from_char).collect()).collect()
 }
 
-fn find_loop_length(map: &Map) -> i64 {
+fn find_loop_coords(map: &Map) -> Vec<(usize, usize)> {
     let (start_x, start_y) = map.iter().enumerate().find_map(|(y, row)| {
         row.iter().enumerate()
             .find_map(|(x, c)| if c == &START { Some(x) } else { None })
             .map(|x| (x, y))
     }).expect("Should contain a starting pipe 'S'!");
 
-    let length = Tile::pipes_iter().filter_map(|start_tile| {
+    let loop_coords = Tile::pipes_iter().filter_map(|start_tile| {
         println!("\n\nTrying with start tile {start_tile}:");
         let result = start_tile.to_string().chars()
             .filter_map(|c| {
+                let mut loop_coords: Vec<(usize, usize)> = vec![];
+
                 let mut heading = Direction::from_str(c.to_string().as_str()).unwrap();
                 let mut coord = (start_x, start_y);
                 let mut tile = *start_tile;
                 println!("\n  Going in {heading} direction from start:");
 
                 let mut done = false;
-                let mut length = 0;
                 let mut the_outcome: Option<NextStep> = None;
 
                 while the_outcome.is_none() {
-                    println!("  - Currently at ({}, {}) which is a {tile} tile, heading {heading}", coord.0, coord.1);
+                    // println!("  - Currently at ({}, {}) which is a {tile} tile, heading {heading}", coord.0, coord.1);
+                    loop_coords.push(coord);
                     let outcome = next_coord(map, coord, heading, *start_tile);
                     match outcome {
                         DeadEnd => {
@@ -64,12 +66,13 @@ fn find_loop_length(map: &Map) -> i64 {
                             done = true;
                             the_outcome = Some(Start)
                         }
-                        Continue((t, c, h)) => { (tile, coord, heading) = (t, c, h); }
+                        Continue((t, c, h)) => {
+                            (tile, coord, heading) = (t, c, h);
+                        }
                     };
-                    length += 1;
                 };
                 match the_outcome {
-                    Some(Start) => Some(length),
+                    Some(Start) => Some(loop_coords),
                     _ => None,
                 }
             })
@@ -77,7 +80,7 @@ fn find_loop_length(map: &Map) -> i64 {
         result
     }).next();
 
-    length.unwrap()
+    loop_coords.unwrap()
 }
 
 
@@ -217,7 +220,7 @@ impl fmt::Display for Tile {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use crate::day10::{find_loop_length, next_heading, parse, part1, part2};
+    use crate::day10::{find_loop_coords, next_heading, parse, part1, part2};
     use crate::day10::Direction::{E, N, S, W};
     use crate::day10::Tile::{EW, GROUND, NE, NS, NW, START, SE, SW};
 
@@ -251,7 +254,7 @@ mod tests {
 .|.|.
 .L-J.
 .....");
-        let loop_length = find_loop_length(&map);
+        let loop_length = find_loop_coords(&map).len();
         assert_eq!(loop_length, 8);
     }
 
@@ -262,7 +265,7 @@ mod tests {
 SJ.L7
 |F--J
 LJ...");
-        let loop_length = find_loop_length(&map);
+        let loop_length = find_loop_coords(&map).len();
         assert_eq!(loop_length, 16);
     }
 
@@ -273,7 +276,7 @@ LJ...");
 SJLL7
 |F--J
 LJ.LJ");
-        let loop_length = find_loop_length(&map);
+        let loop_length = find_loop_coords(&map).len();
         assert_eq!(loop_length, 16);
     }
 
