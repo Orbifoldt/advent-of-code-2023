@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::iter::repeat;
 use itertools::Itertools;
@@ -35,12 +36,18 @@ fn unfold(folded_line: &str) -> String {
 fn num_valid_configs(springs_line: &str) -> usize {
     let (config_str, groups_str) = split_first(springs_line, ' ').unwrap();
     let groups = get_numbers::<usize>(groups_str.replace(",", " ").as_str());
-    let count = valid_configs(config_str, &groups, 0, 0, 0);
-    println!("{springs_line} => {count}");
-    count
+    valid_configs(config_str, &groups)
 }
 
-fn valid_configs(spring_config: &str, groups: &Vec<usize>, cur_idx: usize, cur_group_idx: usize, cur_group_size: usize) -> usize {
+fn valid_configs(spring_config: &str, groups: &Vec<usize>) -> usize {
+    valid_configs_cached(spring_config, groups, 0, 0, 0, &mut HashMap::new())
+}
+
+fn valid_configs_cached(spring_config: &str, groups: &Vec<usize>, cur_idx: usize, cur_group_idx: usize, cur_group_size: usize, mut cache: &mut HashMap<(usize, usize, usize), usize>) -> usize {
+    if let Some(cached_value) = cache.get(&(cur_idx, cur_group_idx, cur_group_size)) {
+        return *cached_value;
+    }
+
     if cur_idx == spring_config.len() { // reached the end
         return if cur_group_idx == groups.len() && cur_group_size == 0 { // outside a group
             1
@@ -48,28 +55,28 @@ fn valid_configs(spring_config: &str, groups: &Vec<usize>, cur_idx: usize, cur_g
             1
         } else { // ended up in invalid state: too many/little groups, or last group incorrect size
             0
-        }
+        };
     }
 
-    let cur_char = spring_config.as_bytes()[cur_idx] as char;
-    let bools_to_check = if cur_char == '?' { vec![true, false] } else { vec![cur_char == '#'] } ;
+    let cur_char = spring_config.as_bytes()[cur_idx] as char;  // our input is ascii, so this works
+    let bools_to_check = if cur_char == '?' { vec![true, false] } else { vec![cur_char == '#'] };
     let mut local_count = 0;
     for b in bools_to_check {
         if b { // inside or entering a group
-            local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx, cur_group_size + 1);
+            local_count += valid_configs_cached(spring_config, groups, cur_idx + 1, cur_group_idx, cur_group_size + 1, cache);
         } else if !b && cur_group_size == 0 { // outside a group
-            local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx, 0);
-        } else if !b && cur_group_size > 0  { // at the end of a group
+            local_count += valid_configs_cached(spring_config, groups, cur_idx + 1, cur_group_idx, 0, cache);
+        } else if !b && cur_group_size > 0 { // at the end of a group
             if cur_group_idx < groups.len() && groups[cur_group_idx] == cur_group_size {
-                local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx + 1, 0);
+                local_count += valid_configs_cached(spring_config, groups, cur_idx + 1, cur_group_idx + 1, 0, cache);
             }
         } else {
             // no valid possibilities, continue... This includes groups running too long
         }
     }
+    cache.insert((cur_idx, cur_group_idx, cur_group_size), local_count);
     local_count
 }
-
 
 
 #[cfg(test)]
@@ -77,7 +84,7 @@ mod tests {
     use crate::day12::{num_valid_configs, part1, part2, unfold};
 
     #[test]
-    fn correctly_determine_number_of_configurations(){
+    fn correctly_determine_number_of_configurations() {
         assert_eq!(num_valid_configs("???.### 1,1,3"), 1);
         assert_eq!(num_valid_configs(".??..??...?##. 1,1,3"), 4);
         assert_eq!(num_valid_configs("?#?#?#?#?#?#?#? 1,3,1,6"), 1);
@@ -98,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn should_correctly_unfold_a_line(){
+    fn should_correctly_unfold_a_line() {
         assert_eq!(unfold(".# 1"), ".#?.#?.#?.#?.# 1,1,1,1,1");
         assert_eq!(
             unfold("???.### 1,1,3"),
