@@ -6,7 +6,7 @@ use crate::common::{get_numbers, split_first};
 pub fn main() {
     let input = &fs::read_to_string("./inputs/day12/input.txt").unwrap();
     part1(input);
-    // part2(input, 1_000_000);
+    part2(input);
 }
 
 fn part1(input: &str) -> usize {
@@ -30,73 +30,51 @@ fn unfold(folded_line: &str) -> String {
     let unfolded_config = repeat(config_str).take(5).intersperse("?").collect::<String>();
     let unfolded_groups = repeat(groups_str).take(5).intersperse(",").collect::<String>();
     unfolded_config + " " + &*unfolded_groups
-
 }
 
 fn num_valid_configs(springs_line: &str) -> usize {
     let (config_str, groups_str) = split_first(springs_line, ' ').unwrap();
     let groups = get_numbers::<usize>(groups_str.replace(",", " ").as_str());
-
-    let question_mark_count: u32 = config_str.chars().filter(|c| c == &'?').count() as u32;
-
-    let mut count = 0;
-    for i in 0..2usize.pow(question_mark_count) {
-        let mut bools: Vec<bool> = vec![];
-        for d in 0..question_mark_count {
-            bools.push(((i >> d) & 1) == 1)
-        }
-
-        let config = config_str.chars().map(|c| {
-            match c {
-                '.' => false,
-                '#' => true,
-                _ => bools.pop().unwrap()
-            }
-        }).collect::<Vec<_>>();
-
-        if matches(config, &groups) {
-            count += 1;
-        }
-    }
-    // println!("{springs_line} => {count}");
+    let count = valid_configs(config_str, &groups, 0, 0, 0);
+    println!("{springs_line} => {count}");
     count
 }
 
-fn matches(spring_config: Vec<bool>, groups: &Vec<usize>) -> bool {
-    let mut group_size = 0;
-    let mut in_group = false;
-    let mut found_groups: Vec<usize> = vec![];
-    for b in spring_config {  // entering a new group
-        if b && !in_group {
-            in_group = true;
-            group_size += 1;
-        } else if b && in_group {  // inside an existing group
-            group_size += 1;
-        } else if !b && in_group { // group just ended
-            found_groups.push(group_size.clone());
-            group_size = 0;
-            in_group = false;
-        } else { // outside a group
-            // continue
+fn valid_configs(spring_config: &str, groups: &Vec<usize>, cur_idx: usize, cur_group_idx: usize, cur_group_size: usize) -> usize {
+    if cur_idx == spring_config.len() { // reached the end
+        return if cur_group_idx == groups.len() && cur_group_size == 0 { // outside a group
+            1
+        } else if cur_group_idx == groups.len() - 1 && cur_group_size == groups[cur_group_idx] { // inside last group that exactly matches desired group
+            1
+        } else { // ended up in invalid state: too many/little groups, or last group incorrect size
+            0
         }
     }
-    if group_size != 0 {  // still in group at the end of the springs
-        found_groups.push(group_size)
-    }
 
-    &found_groups == groups
+    let cur_char = spring_config.as_bytes()[cur_idx] as char;
+    let bools_to_check = if cur_char == '?' { vec![true, false] } else { vec![cur_char == '#'] } ;
+    let mut local_count = 0;
+    for b in bools_to_check {
+        if b { // inside or entering a group
+            local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx, cur_group_size + 1);
+        } else if !b && cur_group_size == 0 { // outside a group
+            local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx, 0);
+        } else if !b && cur_group_size > 0  { // at the end of a group
+            if cur_group_idx < groups.len() && groups[cur_group_idx] == cur_group_size {
+                local_count += valid_configs(spring_config, groups, cur_idx + 1, cur_group_idx + 1, 0);
+            }
+        } else {
+            // no valid possibilities, continue... This includes groups running too long
+        }
+    }
+    local_count
 }
 
 
 
 #[cfg(test)]
 mod tests {
-    use crate::day12::{matches, num_valid_configs, part1, part2, unfold};
-
-    #[test]
-    fn correctly_determine_which_configs_are_valid(){
-        assert_eq!(matches(vec![true, false, true, false, true, true, true], &vec![1,1,3]), true)
-    }
+    use crate::day12::{num_valid_configs, part1, part2, unfold};
 
     #[test]
     fn correctly_determine_number_of_configurations(){
@@ -136,6 +114,17 @@ mod tests {
 ????.#...#... 4,1,1
 ????.######..#####. 1,6,5
 ?###???????? 3,2,1";
-        assert_eq!(part2(input), 506250)
+        assert_eq!(part2(input), 525152)
+    }
+
+    #[test]
+    fn example_part2_line1() {
+        let input = r"???.### 1,1,3";
+        assert_eq!(part2("???.### 1,1,3"), 1)
+    }
+
+    #[test]
+    fn example_part2_line2() {
+        assert_eq!(part2(".??..??...?##. 1,1,3"), 16384)
     }
 }
