@@ -87,7 +87,7 @@ fn follow_light(field: &Vec<Vec<char>>, (width, height): (usize, usize), visited
     while let Some((current, direction)) = argument_stack.pop() {
         if let Some((next_x, next_y)) = next_coord(current, direction, (width, height)) {
             let next = visited[next_y][next_x];
-            if next & (direction.as_power()) != 0 {  // Bitwise AND to check if we came this way already
+            if (next & direction.as_power()) != 0 {  // Bitwise AND to check if we came this way already
                 continue;
             } else {
                 visited[next_y][next_x] = next ^ (direction.as_power());
