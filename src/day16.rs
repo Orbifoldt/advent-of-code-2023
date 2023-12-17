@@ -5,7 +5,8 @@ use std::ops::{Add, Sub};
 use itertools::Itertools;
 use num::Num;
 
-use crate::day16::Direction::{Down, Left, Right, Up};
+use crate::common::{Direction, next_coord};
+use crate::day16::Direction::{East, North, South, West};
 
 pub fn main() {
     let input = &fs::read_to_string("./inputs/day16/input.txt").unwrap();
@@ -15,7 +16,7 @@ pub fn main() {
 
 fn part1(input: &str) -> usize {
     let (field, width, height) = parse(input);
-    let total_energized = determine_energization(&field, width, height, (0, 0), Right);
+    let total_energized = determine_energization(&field, width, height, (0, 0), East);
     println!("Part 1: total number of tiles energized is {total_energized}");
     total_energized
 }
@@ -23,23 +24,14 @@ fn part1(input: &str) -> usize {
 fn part2(input: &str) -> usize {
     let (field, width, height) = parse(input);
 
-    let max_energized = (0..width).flat_map(|x| vec![((x, 0), Down), ((x, height - 1), Up)])
-        .chain((0..height).flat_map(|y| vec![((0, y), Left), ((width - 1, y), Right)]))
+    let max_energized = (0..width).flat_map(|x| vec![((x, 0), South), ((x, height - 1), North)])
+        .chain((0..height).flat_map(|y| vec![((0, y), West), ((width - 1, y), East)]))
         .map(|(start_coord, start_direction)| {
             determine_energization(&field, width, height, start_coord, start_direction)
         })
         .max().unwrap();
     println!("Part 2: maximal number of tiles energized is {max_energized}");
     max_energized
-}
-
-#[derive(Clone, Copy, Debug)]
-enum Direction { Up, Right, Down, Left }
-
-impl Direction {
-    fn as_power(&self) -> usize { // Up => "0001", Down => "0010", Down => "0100" and Left => "1000"
-        2usize.pow(*self as u32)
-    }
 }
 
 fn determine_energization(field: &Vec<Vec<char>>, width: usize, height: usize, start_coord: (usize, usize), start_direction: Direction) -> usize {
@@ -77,7 +69,7 @@ fn parse(input: &str) -> (Vec<Vec<char>>, usize, usize) {
 
 fn follow_light(field: &Vec<Vec<char>>, (width, height): (usize, usize), visited: &mut Vec<Vec<usize>>, start: (usize, usize), incoming_dir: Direction) {
     let next = next_directions(&field, incoming_dir, start.0, start.1);
-    visited[start.1][start.0] = incoming_dir.as_power();
+    visited[start.1][start.0] = incoming_dir.as_power_of_2();
 
     // Initially below was implemented recursively, but that gave a stack overflow. So we just create
     // our own stack! Might contain duplicates, but that doesn't matter really...
@@ -87,10 +79,10 @@ fn follow_light(field: &Vec<Vec<char>>, (width, height): (usize, usize), visited
     while let Some((current, direction)) = argument_stack.pop() {
         if let Some((next_x, next_y)) = next_coord(current, direction, (width, height)) {
             let next = visited[next_y][next_x];
-            if (next & direction.as_power()) != 0 {  // Bitwise AND to check if we came this way already
+            if (next & direction.as_power_of_2()) != 0 {  // Bitwise AND to check if we came this way already
                 continue;
             } else {
-                visited[next_y][next_x] = next ^ (direction.as_power());
+                visited[next_y][next_x] = next ^ (direction.as_power_of_2());
             }
 
             let next_directions = next_directions(field, direction, next_x, next_y);
@@ -103,36 +95,27 @@ fn follow_light(field: &Vec<Vec<char>>, (width, height): (usize, usize), visited
     }
 }
 
-fn next_coord<T: Num + PartialOrd + Clone>((x, y): (T, T), direction: Direction, (width, height): (T, T)) -> Option<(T, T)> {
-    match direction {
-        Left => if x > T::zero() { Some((x - T::one(), y)) } else { None },
-        Right => if x < width - T::one() { Some((x + T::one(), y)) } else { None },
-        Up => if y > T::zero() { Some((x, y - T::one())) } else { None },
-        Down => if y < height - T::one() { Some((x, y + T::one())) } else { None }
-    }
-}
-
 fn next_directions(field: &Vec<Vec<char>>, direction: Direction, next_x: usize, next_y: usize) -> Vec<Direction> {
     match field[next_y][next_x] {
         '.' => vec![direction],
         '/' => match direction {
-            Left => vec![Down],
-            Right => vec![Up],
-            Up => vec![Right],
-            Down => vec![Left],
+            West => vec![South],
+            East => vec![North],
+            North => vec![East],
+            South => vec![West],
         }
         '\\' => match direction {
-            Left => vec![Up],
-            Right => vec![Down],
-            Up => vec![Left],
-            Down => vec![Right],
+            West => vec![North],
+            East => vec![South],
+            North => vec![West],
+            South => vec![East],
         }
         '-' => match direction {
-            Up | Down => vec![Left, Right],
+            North | South => vec![West, East],
             _ => vec![direction],
         }
         '|' => match direction {
-            Left | Right => vec![Up, Down],
+            West | East => vec![North, South],
             _ => vec![direction],
         }
         _ => panic!("Invalid char encountered!")
