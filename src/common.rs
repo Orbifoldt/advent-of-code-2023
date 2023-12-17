@@ -1,4 +1,6 @@
+use std::slice::Iter;
 use num::Num;
+use crate::common::Direction::{East, North, South, West};
 
 pub fn get_numbers<T: std::str::FromStr>(string: &str) -> Vec<T> {
     string.split(' ')
@@ -24,26 +26,40 @@ pub fn lcm(a: i64, b: i64) -> i64 {
 }
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum Direction { North, East, South, West }
 
 impl Direction {
     pub fn as_power_of_2(&self) -> usize {
-        match *self {
-            Direction::North => 0b0001,
-            Direction::East => 0b0010,
-            Direction::South => 0b0100,
-            Direction::West => 0b1000,
+        match self {
+            North => 0b0001,
+            East => 0b0010,
+            South => 0b0100,
+            West => 0b1000,
+        }
+    }
+
+    pub fn iterator() -> Iter<'static, Direction> {
+        static DIRECTIONS: [Direction; 4] = [North, South, East, West];
+        DIRECTIONS.iter()
+    }
+    
+    pub fn inverse(&self) -> Direction {
+        match self {
+            North => South,
+            East => West,
+            South => North,
+            West => East
         }
     }
 }
 
 pub fn next_coord<T: Num + PartialOrd + Clone>((x, y): (T, T), direction: Direction, (width, height): (T, T)) -> Option<(T, T)> {
     match direction {
-        Direction::West => if x > T::zero() { Some((x - T::one(), y)) } else { None },
-        Direction::East => if x < width - T::one() { Some((x + T::one(), y)) } else { None },
-        Direction::North => if y > T::zero() { Some((x, y - T::one())) } else { None },
-        Direction::South => if y < height - T::one() { Some((x, y + T::one())) } else { None }
+        West => if x > T::zero() { Some((x - T::one(), y)) } else { None },
+        East => if x < width - T::one() { Some((x + T::one(), y)) } else { None },
+        North => if y > T::zero() { Some((x, y - T::one())) } else { None },
+        South => if y < height - T::one() { Some((x, y + T::one())) } else { None }
     }
 }
 
