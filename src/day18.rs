@@ -13,6 +13,7 @@ pub fn main() {
 
 fn part1(input: &str) -> usize {
     let instructions = parse_pt1(input);
+    // Take the naive flood-fill approach
     let dug_squares = count_interior_squares(&instructions);
     println!("Part 1: dug {dug_squares} squares");
     dug_squares
@@ -20,7 +21,7 @@ fn part1(input: &str) -> usize {
 
 fn part2(input: &str) -> usize {
     let instructions = parse_pt2(input);
-    let dug_squares = gauss_formula(&instructions);
+    let dug_squares = gauss_area_formula(&instructions);
     println!("Part 1: dug {dug_squares} squares");
     dug_squares.unsigned_abs()
 }
@@ -98,7 +99,7 @@ fn get_neighbors(width: usize, height: usize, coord: (usize, usize)) -> Vec<(usi
 }
 
 // See https://en.wikipedia.org/wiki/Shoelace_formula
-fn gauss_formula(instructions: &Vec<Instruction>) -> isize {
+fn gauss_area_formula(instructions: &Vec<Instruction>) -> isize {
     let (area, _) = instructions.iter()
         .fold((0, (0, 0)), |(area, (x, y)), instruction| {
             let dist = instruction.length as isize;
@@ -123,19 +124,18 @@ fn gauss_formula(instructions: &Vec<Instruction>) -> isize {
 fn parse_pt2(input: &str) -> Vec<Instruction> {
     input.lines().filter(|line| !line.is_empty())
         .map(|line| {
-            let split = line.split(" ").collect::<Vec<_>>();
-            let color = split[2];
-            let c = &color[7..=7];
-            let num = &color[2..7];
+            let hex_color_section = line.split(" ").collect::<Vec<_>>()[2];
+            let direction_indicator = &hex_color_section[7..=7];
+            let hex_distance_string = &hex_color_section[2..7];
             Instruction {
-                direction: match c {
+                direction: match direction_indicator {
                     "3" => North,
                     "0" => East,
                     "1" => South,
                     "2" => West,
                     _ => panic!("Invalid color received!")
                 },
-                length: usize::from_str_radix(num, 16).unwrap(),
+                length: usize::from_str_radix(hex_distance_string, 16).unwrap(),
             }
         })
         .collect()
