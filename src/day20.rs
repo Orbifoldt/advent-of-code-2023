@@ -1,6 +1,6 @@
 use std::{fs, vec};
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::convert::identity;
 
 use itertools::Itertools;
@@ -91,58 +91,62 @@ fn parse(input: &str) -> (HashMap<String, Vec<String>>, HashMap<String, Module>)
     (connections_map, module_map)
 }
 
-fn send_signal(from_name: &String, target_name: &String, high_signal: bool, map: &mut HashMap<String, Vec<String>>, modules: &mut HashMap<String, Module>, (low, high):  (&mut usize, &mut usize)) {
-    if !from_name.is_empty() {
+fn send_signal_bfs(map: &HashMap<String, Vec<String>>, modules: &mut HashMap<String, Module>, (low, high):  (&mut usize, &mut usize)) {
+    let button = &"button".to_string();
+    let broadcast = &"broadcaster".to_string();
+    let mut signals_to_send = VecDeque::from([(button, broadcast, false)]);
+
+    while let Some((from_name, target_name, high_signal)) = signals_to_send.pop_front() {
         if high_signal {
             *high += 1
         } else {
             *low += 1
         }
-
         let string = if high_signal { "high" } else {"low"};
         println!("{from_name} -{string}-> {target_name}");
-    }
 
-    let target = modules.get_mut(target_name).unwrap();
-    // print!("{:?}: ", target.module_type);
-    match target.module_type {
-        Output => {
-            // println!("Received {high_signal} signal from {from_name} to output {:?}", target_name)
-        }
-        Button => {
-            // println!("Sending {high_signal} signal to broadcaster");
-            for next_node in &map.clone()[target_name] {
-                send_signal(target_name, next_node, high_signal, map, modules, (low, high))
-            }
-        }
-        Broadcaster => {
-            // println!("Sending {high_signal} signal to all connectors {:?}", map[target_name]);
-            for next_node in &map.clone()[target_name] {
-                send_signal(target_name, next_node, high_signal, map, modules, (low, high))
-            }
-        }
-        FlipFlop => {
-            // println!("Received {high_signal} signal from '{from_name}' at flip-flop '{}'", target_name);
-            if high_signal {
-                // ignore
-            } else {
-                // flip
-                let new_state = !target.state;
-                target.state = new_state;
-
-                for next_node in &map.clone()[target_name] {
-                    send_signal(target_name, next_node, new_state, map, modules, (low, high))
+        if let Some(target) = modules.get_mut(target_name) {
+            // print!("{:?}: ", target.module_type);
+            match target.module_type {
+                Output => {
+                    // println!("Received {high_signal} signal from {from_name} to output {:?}", target_name)
                 }
-            }
-        }
-        Conjunction => {
-            // println!("Received {high_signal} signal from '{from_name}' at conjunction '{target_name}'");
-            let memory_entry = target.memory.entry(from_name.clone()).or_insert(high_signal);
-            *memory_entry = high_signal;
-            // if all high send low, else send high
-            let signal_to_send =  !target.memory.values().all(|&b| b); // memory is guaranteed non-empty
-            for next_node in &map.clone()[target_name] {
-                send_signal(target_name, next_node, signal_to_send, map, modules, (low, high))
+                Button => {
+                    // println!("Sending {high_signal} signal to broadcaster");
+                    for next_node in &map[target_name] {
+                        signals_to_send.push_back((target_name, next_node, high_signal));
+                    }
+                }
+                Broadcaster => {
+                    // println!("Sending {high_signal} signal to all connectors {:?}", map[target_name]);
+                    for next_node in &map[target_name] {
+                        signals_to_send.push_back((target_name, next_node, high_signal));
+                    }
+                }
+                FlipFlop => {
+                    // println!("Received {high_signal} signal from '{from_name}' at flip-flop '{}'", target_name);
+                    if high_signal {
+                        // ignore
+                    } else {
+                        // flip
+                        let new_state = !target.state;
+                        target.state = new_state;
+
+                        for next_node in &map[target_name] {
+                            signals_to_send.push_back((target_name, next_node, new_state));
+                        }
+                    }
+                }
+                Conjunction => {
+                    // println!("Received {high_signal} signal from '{from_name}' at conjunction '{target_name}'");
+                    let memory_entry = target.memory.entry(from_name.clone()).or_insert(high_signal);
+                    *memory_entry = high_signal;
+                    // if all high send low, else send high
+                    let signal_to_send = !target.memory.values().all(|&b| b); // memory is guaranteed non-empty
+                    for next_node in &map[target_name] {
+                        signals_to_send.push_back((target_name, next_node, signal_to_send));
+                    }
+                }
             }
         }
     }
