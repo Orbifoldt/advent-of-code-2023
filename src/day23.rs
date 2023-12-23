@@ -16,7 +16,7 @@ fn part1(input: &str) -> usize {
     let start = (1, 0);
     let end = (width - 2, height - 1);
 
-    let mut stack = vec![(vec![start], start)];
+    let mut stack = vec![(HashSet::from([start]), start)];
     let mut max_dist = 0;
 
     while let Some((path, current)) = stack.pop() {
@@ -25,7 +25,7 @@ fn part1(input: &str) -> usize {
                 max_dist = max(max_dist, path.len())
             } else if !path.contains(&next) {
                 let mut new_path = path.clone();
-                new_path.push(next);
+                new_path.insert(next);
                 stack.push((new_path, next));
             }
         }
