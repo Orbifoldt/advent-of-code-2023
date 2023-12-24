@@ -49,8 +49,8 @@ fn main() {
     // day20::main();
     // day21::main();
     // day22::main();
-    day23::main();
-    // day24::main();
+    // day23::main();
+    day24::main();
     // day25::main();
 }
 
